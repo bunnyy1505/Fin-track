@@ -1,0 +1,90 @@
+:root {
+    --primary-color: #0d6efd;
+    --primary-hover: #0b5ed7;
+    --transition-speed: 0.3s;
+}
+
+body {
+    font-family: 'Outfit', sans-serif;
+    background-color: var(--bs-body-bg);
+    color: var(--bs-body-color);
+    transition: background-color var(--transition-speed), color var(--transition-speed);
+}
+
+#sidebar {
+    min-height: calc(100vh - 56px);
+    transition: all var(--transition-speed);
+}
+
+#sidebar .nav-link {
+    font-weight: 500;
+    color: var(--bs-secondary-color);
+    transition: all 0.2s ease-in-out;
+}
+
+#sidebar .nav-link:hover {
+    color: var(--primary-color);
+    background-color: var(--bs-secondary-bg);
+}
+
+#sidebar .nav-link.active {
+    color: #fff;
+    background-color: var(--primary-color) !important;
+}
+
+.card {
+    border-radius: 16px !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.08) !important;
+}
+
+#loading-spinner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(255, 255, 255, 0.7);
+    z-index: 2000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+[data-bs-theme="dark"] #loading-spinner {
+    background: rgba(0, 0, 0, 0.7);
+}
+
+[data-bs-theme="dark"] {
+    --primary-color: #378dfc;
+}
+
+.progress-bar-flash {
+    animation: flash 1.5s infinite;
+}
+
+@keyframes flash {
+    0% { opacity: 0.4; }
+    50% { opacity: 1; }
+    100% { opacity: 0.4; }
+}
+
+/* Custom styles for banking aesthetics */
+.uppercase {
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.75rem;
+}
+.sidebar-sticky {
+    position: -webkit-sticky;
+    position: sticky;
+    top: 56px; /* Height of navbar */
+    height: calc(100vh - 56px);
+    padding-top: .5rem;
+    overflow-x: hidden;
+    overflow-y: auto; /* Scrollable contents if viewport is shorter than content. */
+}

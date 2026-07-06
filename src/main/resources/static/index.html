@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinTrack – Personal Finance Dashboard</title>
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Custom Style -->
+    <link rel="stylesheet" href="css/style.css">
+    <!-- ChartJS -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <!-- Loading Spinner Overlay -->
+    <div id="loading-spinner" class="d-none">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+
+    <!-- Toast Notifications Container -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1080;">
+        <div id="app-toast" class="toast align-items-center border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body" id="toast-message"></div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Navigation Bar -->
+    <nav class="navbar navbar-expand-lg border-bottom sticky-top bg-body">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center gap-2 fw-bold text-primary" href="#" onclick="navigateTo('landing')">
+                <i class="bi bi-wallet2 fs-4"></i> FinTrack
+            </a>
+            <div class="d-flex align-items-center gap-3 ms-auto order-lg-last">
+                <!-- Dark Mode Toggle -->
+                <button class="btn btn-link nav-link p-2" id="theme-toggle" aria-label="Toggle Theme">
+                    <i class="bi bi-moon-stars fs-5"></i>
+                </button>
+                
+                <!-- Notification Widget -->
+                <div class="dropdown d-none" id="nav-notifications">
+                    <button class="btn btn-link nav-link p-2 position-relative" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Notifications">
+                        <i class="bi bi-bell fs-5"></i>
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none" id="notification-badge">0</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow border-0 py-2" id="notification-list" style="width: 320px; max-height: 400px; overflow-y: auto;">
+                        <li class="dropdown-header d-flex justify-content-between align-items-center">
+                            <span>Notifications</span>
+                            <a href="#" class="text-decoration-none small" onclick="markAllNotificationsRead(event)">Clear All</a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <!-- Notifications loaded dynamically -->
+                        <li class="dropdown-item text-center text-muted py-3 small">No new notifications</li>
+                    </ul>
+                </div>
+
+                <!-- User Profile Dropdown -->
+                <div class="dropdown d-none" id="nav-user-menu">
+                    <button class="btn btn-primary btn-sm rounded-pill d-flex align-items-center gap-2 px-3" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-person-circle"></i> <span id="user-display-name">User</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2">
+                        <li><a class="dropdown-item" href="#" onclick="navigateTo('profile')"><i class="bi bi-person me-2"></i> My Profile</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="#" onclick="logout()"><i class="bi bi-box-arrow-right me-2"></i> Logout</a></li>
+                    </ul>
+                </div>
+                
+                <div class="d-flex gap-2" id="nav-auth-buttons">
+                    <button class="btn btn-outline-primary btn-sm px-3" onclick="navigateTo('login')">Login</button>
+                    <button class="btn btn-primary btn-sm px-3" onclick="navigateTo('signup')">Sign Up</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- App Main Layout Container -->
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar Navigation (Only visible when logged in) -->
+            <nav id="sidebar" class="col-md-3 col-lg-2 border-end bg-body-tertiary sidebar collapse d-none">
+                <div class="position-sticky pt-3 sidebar-sticky">
+                    <ul class="nav flex-column gap-1">
+                        <li class="nav-item">
+                            <a class="nav-link d-flex align-items-center gap-3 px-3 py-2 rounded active" href="#" onclick="navigateTo('dashboard')">
+                                <i class="bi bi-grid-1x2-fill"></i> Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link d-flex align-items-center gap-3 px-3 py-2 rounded" href="#" onclick="navigateTo('income')">
+                                <i class="bi bi-arrow-down-left-circle-fill text-success"></i> Income
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link d-flex align-items-center gap-3 px-3 py-2 rounded" href="#" onclick="navigateTo('expense')">
+                                <i class="bi bi-arrow-up-right-circle-fill text-danger"></i> Expenses
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link d-flex align-items-center gap-3 px-3 py-2 rounded" href="#" onclick="navigateTo('budget')">
+                                <i class="bi bi-pie-chart-fill text-warning"></i> Budgets
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link d-flex align-items-center gap-3 px-3 py-2 rounded" href="#" onclick="navigateTo('analytics')">
+                                <i class="bi bi-graph-up-arrow"></i> Analytics
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link d-flex align-items-center gap-3 px-3 py-2 rounded" href="#" onclick="navigateTo('reports')">
+                                <i class="bi bi-file-earmark-bar-graph"></i> Reports
+                            </a>
+                        </li>
+                        <li class="nav-item mt-4">
+                            <hr class="mx-3">
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link d-flex align-items-center gap-3 px-3 py-2 rounded text-danger" href="#" onclick="logout()">
+                                <i class="bi bi-power"></i> Logout
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Main Content Area -->
+            <main class="col" id="main-content">
+                
+                <!-- 1. Landing View -->
+                <div id="view-landing" class="view-section py-5">
+                    <div class="row align-items-center g-5 py-5">
+                        <div class="col-lg-6">
+                            <h1 class="display-4 fw-bold lh-1 mb-3 text-body-emphasis">Smart Personal Finance Management</h1>
+                            <p class="lead">Take full control of your financial destiny. Securely track expenses, configure active budgets, set smart recurring transfers, and visualize beautiful charts for modern wealth generation.</p>
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-start">
+                                <button type="button" class="btn btn-primary btn-lg px-4 me-md-2" onclick="navigateTo('signup')">Get Started</button>
+                                <button type="button" class="btn btn-outline-secondary btn-lg px-4" onclick="navigateTo('login')">Sign In</button>
+                            </div>
+                        </div>
+                        <div class="col-10 col-sm-8 col-lg-6">
+                            <div class="card border-0 shadow-lg rounded-4 p-4 text-center bg-primary text-white">
+                                <i class="bi bi-shield-lock-fill display-1 mb-3"></i>
+                                <h3>Bank-Grade JWT Security</h3>
+                                <p>Stateless session tracking, dual access/refresh tokens, and encrypted database schema storage.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Login View -->
+                <div id="view-login" class="view-section d-none py-5">
+                    <div class="row justify-content-center">
+                        <div class="col-md-5">
+                            <div class="card border-0 shadow rounded-4 p-4">
+                                <div class="text-center mb-4">
+                                    <i class="bi bi-wallet2 text-primary display-4"></i>
+                                    <h2 class="fw-bold mt-2">Welcome Back</h2>
+                                    <p class="text-muted">Sign in to manage your budget</p>
+                                </div>
+                                <form id="login-form" onsubmit="handleLogin(event)">
+                                    <div class="mb-3">
+                                        <label for="login-username" class="form-label">Username or Email</label>
+                                        <input type="text" class="form-control rounded-3" id="login-username" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="login-password" class="form-label">Password</label>
+                                        <input type="password" class="form-control rounded-3" id="login-password" required>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-4">
+                                        <a href="#" onclick="showForgotPasswordModal(event)" class="small text-decoration-none">Forgot Password?</a>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary w-100 py-2 rounded-3">Sign In</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Signup View -->
+                <div id="view-signup" class="view-section d-none py-5">
+                    <div class="row justify-content-center">
+                        <div class="col-md-5">
+                            <div class="card border-0 shadow rounded-4 p-4">
+                                <div class="text-center mb-4">
+                                    <i class="bi bi-person-plus text-primary display-4"></i>
+                                    <h2 class="fw-bold mt-2">Create Account</h2>
+                                    <p class="text-muted">Start tracking your wealth today</p>
+                                </div>
+                                <form id="signup-form" onsubmit="handleSignup(event)">
+                                    <div class="mb-3">
+                                        <label for="signup-username" class="form-label">Username</label>
+                                        <input type="text" class="form-control rounded-3" id="signup-username" required minlength="3">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="signup-email" class="form-label">Email Address</label>
+                                        <input type="email" class="form-control rounded-3" id="signup-email" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="signup-fullname" class="form-label">Full Name</label>
+                                        <input type="text" class="form-control rounded-3" id="signup-fullname" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="signup-password" class="form-label">Password</label>
+                                        <input type="password" class="form-control rounded-3" id="signup-password" required minlength="6">
+                                    </div>
+                                    <button type="submit" class="btn btn-primary w-100 py-2 rounded-3 mt-3">Register</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. Dashboard View -->
+                <div id="view-dashboard" class="view-section d-none py-4">
+                    <h2 class="fw-bold mb-4">Financial Dashboard</h2>
+                    
+                    <!-- KPI Cards Row -->
+                    <div class="row g-4 mb-4">
+                        <div class="col-md-4">
+                            <div class="card kpi-card border-0 shadow-sm rounded-4 p-3 bg-primary text-white">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div>
+                                        <span class="small text-white-50 uppercase">Current Balance</span>
+                                        <h2 class="fw-bold mt-1" id="dash-balance">$0.00</h2>
+                                    </div>
+                                    <i class="bi bi-cash-stack fs-1 opacity-50"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card kpi-card border-0 shadow-sm rounded-4 p-3">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div>
+                                        <span class="small text-muted uppercase">Monthly Income</span>
+                                        <h2 class="fw-bold mt-1 text-success" id="dash-income">$0.00</h2>
+                                    </div>
+                                    <i class="bi bi-arrow-down-left-circle-fill text-success fs-1"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card kpi-card border-0 shadow-sm rounded-4 p-3">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div>
+                                        <span class="small text-muted uppercase">Monthly Expenses</span>
+                                        <h2 class="fw-bold mt-1 text-danger" id="dash-expense">$0.00</h2>
+                                    </div>
+                                    <i class="bi bi-arrow-up-right-circle-fill text-danger fs-1"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-4 mb-4">
+                        <div class="col-md-3">
+                            <div class="card border-0 shadow-sm rounded-4 p-3 text-center">
+                                <span class="small text-muted block">Today's Income</span>
+                                <h4 class="fw-bold text-success mt-1" id="dash-today-income">$0.00</h4>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card border-0 shadow-sm rounded-4 p-3 text-center">
+                                <span class="small text-muted block">Today's Expense</span>
+                                <h4 class="fw-bold text-danger mt-1" id="dash-today-expense">$0.00</h4>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card border-0 shadow-sm rounded-4 p-3 text-center">
+                                <span class="small text-muted block">Monthly Savings</span>
+                                <h4 class="fw-bold text-info mt-1" id="dash-monthly-savings">$0.00</h4>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card border-0 shadow-sm rounded-4 p-3 text-center">
+                                <span class="small text-muted block">Financial Health Score</span>
+                                <h4 class="fw-bold text-primary mt-1" id="dash-health-score">100/100</h4>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Details Row -->
+                    <div class="row g-4">
+                        <!-- Recent Transactions -->
+                        <div class="col-lg-8">
+                            <div class="card border-0 shadow-sm rounded-4 p-4">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h4 class="fw-bold mb-0">Recent Activity</h4>
+                                    <button class="btn btn-outline-primary btn-sm" onclick="navigateTo('income')">View All</button>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle">
+                                        <thead>
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Category</th>
+                                                <th>Type</th>
+                                                <th>Description</th>
+                                                <th>Amount</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="dash-transactions-body">
+                                            <tr>
+                                                <td colspan="5" class="text-center text-muted">No transactions found</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Budget Utilization Widgets -->
+                        <div class="col-lg-4">
+                            <div class="card border-0 shadow-sm rounded-4 p-4">
+                                <h4 class="fw-bold mb-3">Budget Limits</h4>
+                                <div id="dash-budget-progress-container">
+                                    <!-- Budget progress cards loaded dynamically -->
+                                    <div class="text-center text-muted">No budgets configured</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. Income View -->
+                <div id="view-income" class="view-section d-none py-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h2 class="fw-bold">Incomes Logger</h2>
+                        <button class="btn btn-primary" onclick="showAddTransactionModal('INCOME')"><i class="bi bi-plus-circle me-2"></i> Add Income</button>
+                    </div>
+
+                    <!-- Search & Filters -->
+                    <div class="card border-0 shadow-sm rounded-4 p-3 mb-4">
+                        <form id="income-filter-form" class="row g-3 align-items-end" onsubmit="filterIncome(event)">
+                            <div class="col-md-3">
+                                <label for="income-filter-start" class="form-label small text-muted">Start Date</label>
+                                <input type="date" class="form-control" id="income-filter-start">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="income-filter-end" class="form-label small text-muted">End Date</label>
+                                <input type="date" class="form-control" id="income-filter-end">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="income-filter-category" class="form-label small text-muted">Category</label>
+                                <select class="form-select" id="income-filter-category">
+                                    <option value="ALL">All Categories</option>
+                                    <option value="Salary">Salary</option>
+                                    <option value="Business">Business</option>
+                                    <option value="Freelance">Freelance</option>
+                                    <option value="Interest">Interest</option>
+                                    <option value="Gift">Gift</option>
+                                    <option value="Others">Others</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="income-filter-search" class="form-label small text-muted">Search Text</label>
+                                <input type="text" class="form-control" placeholder="Search details..." id="income-filter-search">
+                            </div>
+                            <div class="col-md-1">
+                                <button type="submit" class="btn btn-primary w-100">Filter</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Income Records Table -->
+                    <div class="card border-0 shadow-sm rounded-4 p-4">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Category</th>
+                                        <th>Description</th>
+                                        <th>Amount</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="income-table-body">
+                                    <!-- Dynamic rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <!-- Pagination -->
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <span class="small text-muted" id="income-page-indicator">Showing page 0 of 0</span>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-secondary" id="income-prev-page-btn" onclick="changeIncomePage(-1)">Previous</button>
+                                <button class="btn btn-outline-secondary" id="income-next-page-btn" onclick="changeIncomePage(1)">Next</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 6. Expense View -->
+                <div id="view-expense" class="view-section d-none py-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h2 class="fw-bold">Expenses Logger</h2>
+                        <button class="btn btn-primary" onclick="showAddTransactionModal('EXPENSE')"><i class="bi bi-plus-circle me-2"></i> Add Expense</button>
+                    </div>
+
+                    <!-- Filters -->
+                    <div class="card border-0 shadow-sm rounded-4 p-3 mb-4">
+                        <form id="expense-filter-form" class="row g-3 align-items-end" onsubmit="filterExpense(event)">
+                            <div class="col-md-3">
+                                <label for="expense-filter-start" class="form-label small text-muted">Start Date</label>
+                                <input type="date" class="form-control" id="expense-filter-start">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="expense-filter-end" class="form-label small text-muted">End Date</label>
+                                <input type="date" class="form-control" id="expense-filter-end">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="expense-filter-category" class="form-label small text-muted">Category</label>
+                                <select class="form-select" id="expense-filter-category">
+                                    <option value="ALL">All Categories</option>
+                                    <option value="Food">Food</option>
+                                    <option value="Transport">Transport</option>
+                                    <option value="Shopping">Shopping</option>
+                                    <option value="Medical">Medical</option>
+                                    <option value="Bills">Bills</option>
+                                    <option value="Education">Education</option>
+                                    <option value="Entertainment">Entertainment</option>
+                                    <option value="Investment">Investment</option>
+                                    <option value="Travel">Travel</option>
+                                    <option value="Others">Others</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="expense-filter-search" class="form-label small text-muted">Search Text</label>
+                                <input type="text" class="form-control" placeholder="Search details..." id="expense-filter-search">
+                            </div>
+                            <div class="col-md-1">
+                                <button type="submit" class="btn btn-primary w-100">Filter</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Expense Records Table -->
+                    <div class="card border-0 shadow-sm rounded-4 p-4">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Category</th>
+                                        <th>Description</th>
+                                        <th>Amount</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="expense-table-body">
+                                    <!-- Dynamic rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <!-- Pagination -->
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <span class="small text-muted" id="expense-page-indicator">Showing page 0 of 0</span>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-secondary" id="expense-prev-page-btn" onclick="changeExpensePage(-1)">Previous</button>
+                                <button class="btn btn-outline-secondary" id="expense-next-page-btn" onclick="changeExpensePage(1)">Next</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 7. Budget View -->
+                <div id="view-budget" class="view-section d-none py-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h2 class="fw-bold">Budget Planners</h2>
+                        <button class="btn btn-primary" onclick="showAddBudgetModal()"><i class="bi bi-plus-circle me-2"></i> Create Budget</button>
+                    </div>
+
+                    <div class="row g-4" id="budget-cards-container">
+                        <!-- Budgets list items dynamically loaded -->
+                    </div>
+                </div>
+
+                <!-- 8. Reports View -->
+                <div id="view-reports" class="view-section d-none py-4">
+                    <h2 class="fw-bold mb-4">Financial Reports</h2>
+
+                    <div class="row justify-content-center">
+                        <div class="col-md-6">
+                            <div class="card border-0 shadow-sm rounded-4 p-4 text-center">
+                                <i class="bi bi-file-earmark-arrow-down-fill display-3 text-primary mb-3"></i>
+                                <h4 class="fw-bold">Export Statements</h4>
+                                <p class="text-muted">Choose your statement date boundaries and export format below.</p>
+                                
+                                <form id="report-form" class="text-start mt-4">
+                                    <div class="row mb-3">
+                                        <div class="col">
+                                            <label for="report-start-date" class="form-label small text-muted">Start Date</label>
+                                            <input type="date" class="form-control" id="report-start-date" required>
+                                        </div>
+                                        <div class="col">
+                                            <label for="report-end-date" class="form-label small text-muted">End Date</label>
+                                            <input type="date" class="form-control" id="report-end-date" required>
+                                        </div>
+                                    </div>
+                                    <div class="d-grid gap-2 mt-4">
+                                        <button type="button" class="btn btn-primary" onclick="exportReport('pdf')">
+                                            <i class="bi bi-filetype-pdf me-2"></i> Download PDF Document
+                                        </button>
+                                        <button type="button" class="btn btn-outline-primary" onclick="exportReport('csv')">
+                                            <i class="bi bi-file-earmark-excel me-2"></i> Download CSV Statement
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 9. Analytics View -->
+                <div id="view-analytics" class="view-section d-none py-4">
+                    <h2 class="fw-bold mb-4">Visual Analytics</h2>
+                    
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="card border-0 shadow-sm rounded-4 p-3">
+                                <h5 class="fw-bold mb-3">Monthly Cash Flow</h5>
+                                <canvas id="chart-cashflow"></canvas>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card border-0 shadow-sm rounded-4 p-3">
+                                <h5 class="fw-bold mb-3">Expense Category Breakdown</h5>
+                                <canvas id="chart-categories"></canvas>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card border-0 shadow-sm rounded-4 p-3">
+                                <h5 class="fw-bold mb-3">Budget Utilization</h5>
+                                <canvas id="chart-budgets"></canvas>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card border-0 shadow-sm rounded-4 p-3">
+                                <h5 class="fw-bold mb-3">Income vs Expense Variance</h5>
+                                <canvas id="chart-variance"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 10. Profile View -->
+                <div id="view-profile" class="view-section d-none py-4">
+                    <h2 class="fw-bold mb-4">My Account Profile</h2>
+
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <!-- Update Profile Details -->
+                            <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+                                <h4 class="fw-bold mb-3">Personal Details</h4>
+                                <form id="profile-update-form" onsubmit="handleUpdateProfile(event)">
+                                    <div class="mb-3">
+                                        <label for="profile-fullname" class="form-label">Full Name</label>
+                                        <input type="text" class="form-control" id="profile-fullname" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="profile-email" class="form-label">Email Address</label>
+                                        <input type="email" class="form-control" id="profile-email" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Update Profile</button>
+                                </form>
+                            </div>
+
+                            <!-- Deactivate Account -->
+                            <div class="card border-0 shadow-sm rounded-4 p-4 border-danger">
+                                <h4 class="fw-bold text-danger mb-3">Danger Zone</h4>
+                                <p class="small text-muted">Deactivating your account will freeze access immediately. This operation is non-reversible.</p>
+                                <button class="btn btn-danger" onclick="deactivateAccount()">Deactivate My Account</button>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <!-- Change Password -->
+                            <div class="card border-0 shadow-sm rounded-4 p-4">
+                                <h4 class="fw-bold mb-3">Security & Password</h4>
+                                <form id="change-password-form" onsubmit="handleChangePassword(event)">
+                                    <div class="mb-3">
+                                        <label for="pwd-old" class="form-label">Current Password</label>
+                                        <input type="password" class="form-control" id="pwd-old" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="pwd-new" class="form-label">New Password</label>
+                                        <input type="password" class="form-control" id="pwd-new" required minlength="6">
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Update Password</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <!-- Add/Edit Transaction Modal -->
+    <div class="modal fade" id="transactionModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="transactionModalTitle">Add Transaction</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="transaction-form" onsubmit="handleSaveTransaction(event)">
+                    <div class="modal-body">
+                        <input type="hidden" id="txn-id">
+                        <input type="hidden" id="txn-type">
+                        <div class="mb-3">
+                            <label for="txn-amount" class="form-label">Amount ($)</label>
+                            <input type="number" step="0.01" class="form-control" id="txn-amount" required min="0.01">
+                        </div>
+                        <div class="mb-3">
+                            <label for="txn-category" class="form-label">Category</label>
+                            <select class="form-select" id="txn-category" required>
+                                <!-- Rendered dynamically based on type -->
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="txn-date" class="form-label">Transaction Date</label>
+                            <input type="date" class="form-control" id="txn-date" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="txn-desc" class="form-label">Description</label>
+                            <input type="text" class="form-control" id="txn-desc" placeholder="Details...">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Transaction</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Budget Modal -->
+    <div class="modal fade" id="budgetModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="budgetModalTitle">Create Budget</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="budget-form" onsubmit="handleSaveBudget(event)">
+                    <div class="modal-body">
+                        <input type="hidden" id="budget-id">
+                        <div class="mb-3">
+                            <label for="budget-category" class="form-label">Category</label>
+                            <select class="form-select" id="budget-category" required>
+                                <option value="ALL">ALL Categories (Overall)</option>
+                                <option value="Food">Food</option>
+                                <option value="Transport">Transport</option>
+                                <option value="Shopping">Shopping</option>
+                                <option value="Medical">Medical</option>
+                                <option value="Bills">Bills</option>
+                                <option value="Education">Education</option>
+                                <option value="Entertainment">Entertainment</option>
+                                <option value="Investment">Investment</option>
+                                <option value="Travel">Travel</option>
+                                <option value="Others">Others</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="budget-limit" class="form-label">Limit Amount ($)</label>
+                            <input type="number" step="0.01" class="form-control" id="budget-limit" required min="0.01">
+                        </div>
+                        <div class="mb-3">
+                            <label for="budget-start" class="form-label">Start Date</label>
+                            <input type="date" class="form-control" id="budget-start" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="budget-end" class="form-label">End Date</label>
+                            <input type="date" class="form-control" id="budget-end" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Budget</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap Bundle JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom Application JS -->
+    <script src="js/app.js?v=3"></script>
+</body>
+</html>
